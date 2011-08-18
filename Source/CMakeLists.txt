@@ -1,5 +1,13 @@
 # Find all *.cpp files
-FILE(GLOB MESHCONVERTER_SOURCES *.cpp)
+SET(MESHCONVERTER_SOURCES 
+	main.cpp
+	options.cpp
+	tinystr.cpp
+	tinyxml.cpp
+	tinyxmlerror.cpp
+	tinyxmlparser.cpp
+	AssimpReader.cpp
+)
 
 INCLUDE_DIRECTORIES(
 	${CMAKE_CURRENT_SOURCE_DIR}
