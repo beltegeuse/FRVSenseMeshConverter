@@ -17,12 +17,13 @@ IF(WIN32)
     include(LibFindVSPath)
     
 	find_path(Assimp_INCLUDE_DIR
- 	 NAMES assimp/assimp.h
+ 	 NAMES assimp.h
   	 PATHS 
   	    ${Assimp_ROOT_DIR}/include
   	 	${Assimp_PKGCONF_INCLUDE_DIRS} 
   	 	${VS_DIR}/VC/include
   	 	C:/MinGW/include
+  	 PATH_SUFFIXES assimp
   	 DOC "The directory where Assimp.h resides"
 	)
 	
@@ -38,7 +39,7 @@ IF(WIN32)
 	
 ELSE(WIN32)
 	find_path(Assimp_INCLUDE_DIR
- 	 NAMES assimp/assimp.h
+ 	 NAMES assimp.h
   	 PATHS 
   	    ${Assimp_ROOT_DIR}/include
   	 	${Assimp_PKGCONF_INCLUDE_DIRS} 
@@ -46,6 +47,7 @@ ELSE(WIN32)
   	 	/usr/local/include
 		/sw/include
 		/opt/local/include
+	 PATH_SUFFIXES assimp
   	 DOC "The directory where Assimp.h resides"
 	)
 	

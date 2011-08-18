@@ -2,8 +2,8 @@
 #define ASSIMPREADER_H_
 
 // Includes assimp
-#include <assimp/assimp.h>
-#include <assimp/aiScene.h>
+#include <assimp.h>
+#include <aiScene.h>
 // Includes glm
 #include "glm/glm.hpp"
 // Includes STL

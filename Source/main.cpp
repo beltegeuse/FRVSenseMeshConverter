@@ -19,8 +19,9 @@ TiXmlElement* writeAttribute(const std::vector<float>& data, int index, int size
 
 	std::stringstream ss;
 	for(std::size_t i = 0; i < data.size(); i++)
+	{
 		ss << data[i] << " ";
-
+	}
 	attributeNode->LinkEndChild(new TiXmlText(ss.str()));
 	return attributeNode;
 }
@@ -74,7 +75,7 @@ TiXmlElement* writeIndices(const std::vector<unsigned int>& data, const std::str
 static const char * optv[] = {
     "h|help",
     "i:file-input    <path>",
-    "o|file-output   <path>",
+    "o?file-output   <path>",
     NULL
 } ;
 
@@ -121,6 +122,14 @@ int main(int argc, char *argv[])
 	{
 		for(size_t i = 0; i < errors.size(); i++)
 			std::cerr << "[Error] " << errors[i] << std::endl;
+
+		showUsage(opts,std::cerr);
+		return 1;
+	}
+
+	if(inFilePath == "")
+	{
+		std::cerr << "[Error] You must specify the input file." << std::endl;
 		showUsage(opts,std::cerr);
 		return 1;
 	}

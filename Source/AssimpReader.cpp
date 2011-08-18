@@ -1,6 +1,6 @@
 #include "AssimpReader.h"
 // Includes assimp
-#include <assimp/aiPostProcess.h>
+#include <aiPostProcess.h>
 // Includes glm
 #include "glm/gtc/matrix_inverse.hpp"
 // Includes STL
@@ -21,7 +21,8 @@ AssimpReader::~AssimpReader()
 
 void AssimpReader::LoadFromFile(const std::string& path)
 {
-	const struct aiScene* scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_Fast);
+	const struct aiScene* scene = aiImportFile(path.c_str(), aiProcess_JoinIdenticalVertices
+			| aiProcess_SortByPType | aiProcess_Triangulate );
 
 	// Read the assimp struct
 	LoadNode(scene, scene->mRootNode, glm::mat4());
@@ -89,8 +90,8 @@ void AssimpReader::LoadNode(const aiScene* scene, aiNode* nd, const glm::mat4& p
 			glm::vec4 vertex(mesh->mVertices[id].x, mesh->mVertices[id].y, mesh->mVertices[id].z,1.f);
 			vertex = worldMat*vertex;
 			Vertex.push_back(vertex.x/vertex.w);
-			Vertex.push_back(vertex.y/vertex.w);
 			Vertex.push_back(vertex.z/vertex.w);
+			Vertex.push_back(-vertex.y/vertex.w);
 		}
 
 		//  * Normal buffer
@@ -101,8 +102,8 @@ void AssimpReader::LoadNode(const aiScene* scene, aiNode* nd, const glm::mat4& p
 				glm::vec3 normal(mesh->mNormals[id].x,mesh->mNormals[id].y,mesh->mNormals[id].z);
 				normal = glm::normalize(normalMat*normal);
 				Normal.push_back(normal.x);
-				Normal.push_back(normal.y);
 				Normal.push_back(normal.z);
+				Normal.push_back(-normal.y);
 			}
 			hasNormal = true;
 		}
