@@ -9,22 +9,23 @@
 // Includes STL
 #include <vector>
 
+struct AssimpMesh
+{
+	std::vector<unsigned int> Indices;
+	std::vector<glm::vec4> Vertex;
+	std::vector<glm::vec3> Normals;
+	std::vector<glm::vec3> Colors;
+	std::vector<glm::vec2> UVs;
+};
+
 class AssimpReader {
 public:
 	/*
 	 * Attributes
 	 */
 	// === Data arrays
-	std::vector<unsigned int> Indices;
-	std::vector<float> Vertex;
-	std::vector<float> Normal;
-	std::vector<float> Color;
-	// === Know if there is interesting data
-	bool hasNormal;
-	bool hasColor;
-private:
-	// === Other
-	int m_indiceOffset;
+	std::vector<AssimpMesh> Meshs;
+
 public:
 	AssimpReader();
 	virtual ~AssimpReader();

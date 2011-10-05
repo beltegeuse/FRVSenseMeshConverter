@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
+#include <fstream>
 #include <stdarg.h>
 #include <limits.h>
 // Includes Code proj
@@ -64,6 +65,42 @@ TiXmlElement* writeIndices(const std::vector<unsigned int>& data, const std::str
 	indicesNode->LinkEndChild(new TiXmlText(ss.str()));
 	return indicesNode;
 }
+
+//void WritegltutExport()
+//{
+//	////////////////////////
+//	// Write the xml file
+//	////////////////////////
+//	TiXmlDocument doc(outFilePath);
+//
+//	TiXmlDeclaration * decl = new TiXmlDeclaration("1.0", "", "");
+//	TiXmlElement* meshNode = new TiXmlElement("mesh");
+//
+//	// --- Write attributes
+//	meshNode->LinkEndChild(writeAttribute(meshReader.Vertex, 0, 3));
+//	if(meshReader.hasColor)
+//		meshNode->LinkEndChild(writeAttribute(meshReader.Color, 1, 3));
+//	if(meshReader.hasNormal)
+//			meshNode->LinkEndChild(writeAttribute(meshReader.Normal, 2, 3));
+//
+//	// --- Write vao
+//	meshNode->LinkEndChild(writeVAO("flat", 1, 0));
+//	if(meshReader.hasColor)
+//		meshNode->LinkEndChild(writeVAO("color", 2, 0, 1));
+//	if(meshReader.hasNormal)
+//		meshNode->LinkEndChild(writeVAO("lit", 2, 0, 2));
+//	if(meshReader.hasColor && meshReader.hasNormal)
+//		meshNode->LinkEndChild(writeVAO("lit-color", 2, 0, 1, 2));
+//
+//	// --- Write index buffer
+//	meshNode->LinkEndChild(writeIndices(meshReader.Indices));
+//
+//	// --- Write the XML file
+//	doc.LinkEndChild(decl);
+//	doc.LinkEndChild(meshNode);
+//
+//	doc.SaveFile(outFilePath);
+//}
 
 //////////////////////////////////////////
 //////////////////////////////////////////
@@ -138,45 +175,75 @@ int main(int argc, char *argv[])
 	meshReader.LoadFromFile(inFilePath);
 
 	// Show mesh information
-	std::cout << "------- Mesh info -------" << std::endl;
+	std::cout << "******** Meshs info ********" << std::endl;
 	std::cout << "  * filename : " << inFilePath << std::endl;
-	std::cout << "  * number indices : " << meshReader.Indices.size() << std::endl;
-	std::cout << "  * number vertex : " << meshReader.Vertex.size() << std::endl;
-	std::cout << "  * has normal : " << (meshReader.hasNormal ? "True" : "False") << std::endl;
-	std::cout << "  * has color : " << (meshReader.hasColor ? "True" : "False") << std::endl;
+	std::cout << "\n";
+	for(unsigned int i = 0; i < meshReader.Meshs.size(); i++)
+	{
+		std::cout << "\n";
+		std::cout << "------- Mesh info :" << "\n";
+		std::cout << "  * number indices : " << meshReader.Meshs[i].Indices.size() << std::endl;
+		std::cout << "  * number vertex : " << meshReader.Meshs[i].Vertex.size() << std::endl;
+		std::cout << "  * has normal : " << (meshReader.Meshs[i].Normals.empty() ? "False" : "True") << std::endl;
+		std::cout << "  * has color : " << (meshReader.Meshs[i].Colors.empty() ? "False" : "True") << std::endl;
+		std::cout << "  * has UV : " << (meshReader.Meshs[i].UVs.empty() ? "False" : "True") << std::endl;
+	}
 
-	////////////////////////
-	// Write the xml file
-	////////////////////////
-	TiXmlDocument doc(outFilePath);
+	// Exporter PBRT
+	std::cout << "\n";
+	std::cout << "Write PBRT file : " << outFilePath << "... \n";
+	std::fstream file(outFilePath.c_str(), std::fstream::out);
+	
+	for(unsigned int i = 0; i < meshReader.Meshs.size(); i++)
+	{
+		std::cout << "... Write Mesh";
+		file << "AttributeBegin\n";
+		file << "Shape \"trianglemesh\"\n";
 
-	TiXmlDeclaration * decl = new TiXmlDeclaration("1.0", "", "");
-	TiXmlElement* meshNode = new TiXmlElement("mesh");
+		// *** Vertex
+		file << "\"point P\" [\n";
+		for(unsigned int n = 0; n < meshReader.Meshs[i].Vertex.size(); n++)
+		{
+			glm::vec4 vertex = meshReader.Meshs[i].Vertex[n];
+			file << vertex.x / vertex.w << " " << vertex.y / vertex.w  << " " << vertex.x / vertex.z << "\n";
+		}
+		file << "]\n";
+		
+		// *** UVs
+		if(!meshReader.Meshs[i].UVs.empty())
+		{
+			file << "\"float uv\" [\n";
+			for(unsigned int n = 0; n < meshReader.Meshs[i].UVs.size(); n++)
+			{
+				glm::vec2 uvcoord = meshReader.Meshs[i].UVs[n];
+				file << uvcoord.x << " " << uvcoord.y  << "\n";
+			}
+			file << "]\n";
+		}
 
-	// --- Write attributes
-	meshNode->LinkEndChild(writeAttribute(meshReader.Vertex, 0, 3));
-	if(meshReader.hasColor)
-		meshNode->LinkEndChild(writeAttribute(meshReader.Color, 1, 3));
-	if(meshReader.hasNormal)
-			meshNode->LinkEndChild(writeAttribute(meshReader.Normal, 2, 3));
+		// *** Normales 
+		if(!meshReader.Meshs[i].Normals.empty())
+		{
+			file << "\"normal N\" [\n";
+			for(unsigned int n = 0; n < meshReader.Meshs[i].Normals.size(); n++)
+			{
+				glm::vec3 normal = meshReader.Meshs[i].Normals[n];
+				file << normal.x << " " << normal.y  << " " << normal.x << "\n";
+			}
+			file << "]\n";
+		}
 
-	// --- Write vao
-	meshNode->LinkEndChild(writeVAO("flat", 1, 0));
-	if(meshReader.hasColor)
-		meshNode->LinkEndChild(writeVAO("color", 2, 0, 1));
-	if(meshReader.hasNormal)
-		meshNode->LinkEndChild(writeVAO("lit", 2, 0, 2));
-	if(meshReader.hasColor && meshReader.hasNormal)
-		meshNode->LinkEndChild(writeVAO("lit-color", 2, 0, 1, 2));
+		// *** Indices
+		file << "\"integer indices\" [\n";
+		for(unsigned int n = 0; n < meshReader.Meshs[i].Indices.size(); n+=3)
+		{
+			file << meshReader.Meshs[i].Indices[n] << " " << meshReader.Meshs[i].Indices[n+1] 
+				 << " " << meshReader.Meshs[i].Indices[n+2] << "\n";
+		}
+		file << "]\n";
 
-	// --- Write index buffer
-	meshNode->LinkEndChild(writeIndices(meshReader.Indices));
-
-	// --- Write the XML file
-	doc.LinkEndChild(decl);
-	doc.LinkEndChild(meshNode);
-
-	doc.SaveFile(outFilePath);
+		file << "AttributeEnd\n";
+	}
 }
 
 

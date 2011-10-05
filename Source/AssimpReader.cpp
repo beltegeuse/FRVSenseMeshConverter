@@ -8,10 +8,7 @@
 #include <vector>
 #include <algorithm>
 
-AssimpReader::AssimpReader() :
-	m_indiceOffset(0),
-	hasNormal(false),
-	hasColor(false)
+AssimpReader::AssimpReader()
 {
 }
 
@@ -21,8 +18,16 @@ AssimpReader::~AssimpReader()
 
 void AssimpReader::LoadFromFile(const std::string& path)
 {
-	const struct aiScene* scene = aiImportFile(path.c_str(), aiProcess_JoinIdenticalVertices
-			| aiProcess_SortByPType | aiProcess_Triangulate );
+	const struct aiScene* scene = aiImportFile(path.c_str(), aiProcess_CalcTangentSpace		|  \
+	aiProcess_GenNormals			|  \
+	aiProcess_JoinIdenticalVertices |  \
+	aiProcess_Triangulate			|  \
+	aiProcess_GenUVCoords           |  \
+	aiProcess_SortByPType           |  \
+	aiProcess_FindDegenerates       |  \
+	0);
+
+	//aiProcess_JoinIdenticalVertices | aiProcess_SortByPType | aiProcess_Triangulate | aiProcess_FindDegenerates);
 
 	// Read the assimp struct
 	LoadNode(scene, scene->mRootNode, glm::mat4());
@@ -49,6 +54,8 @@ void AssimpReader::LoadNode(const aiScene* scene, aiNode* nd, const glm::mat4& p
 			std::cout << "[Info] Skip assimp mesh. No faces. \n";
 			continue;
 		}
+		// Creation object Mesh
+		AssimpMesh meshData;
 
 		/***********************************
 		 * Read Indice Mesh information
@@ -77,10 +84,7 @@ void AssimpReader::LoadNode(const aiScene* scene, aiNode* nd, const glm::mat4& p
 
 		// Append the indice array
 		for(unsigned int i = 0; i < indicesVector.size(); i++)
-			Indices.push_back(indicesVector[i]+m_indiceOffset);
-
-		// Update offset
-		m_indiceOffset+=maxIndice;
+			meshData.Indices.push_back(indicesVector[i]);
 
 		/***********************************
 		 * Read Vertex Mesh information
@@ -89,9 +93,7 @@ void AssimpReader::LoadNode(const aiScene* scene, aiNode* nd, const glm::mat4& p
 		{
 			glm::vec4 vertex(mesh->mVertices[id].x, mesh->mVertices[id].y, mesh->mVertices[id].z,1.f);
 			vertex = worldMat*vertex;
-			Vertex.push_back(vertex.x/vertex.w);
-			Vertex.push_back(vertex.z/vertex.w);
-			Vertex.push_back(-vertex.y/vertex.w);
+			meshData.Vertex.push_back(vertex);
 		}
 
 		//  * Normal buffer
@@ -101,16 +103,8 @@ void AssimpReader::LoadNode(const aiScene* scene, aiNode* nd, const glm::mat4& p
 			{
 				glm::vec3 normal(mesh->mNormals[id].x,mesh->mNormals[id].y,mesh->mNormals[id].z);
 				normal = glm::normalize(normalMat*normal);
-				Normal.push_back(normal.x);
-				Normal.push_back(normal.z);
-				Normal.push_back(-normal.y);
+				meshData.Normals.push_back(normal);
 			}
-			hasNormal = true;
-		}
-		else
-		{
-			for(int i = 0; i < (maxIndice + 1)*3; i++)
-				Normal.push_back(0.f);
 		}
 
 		//   * Color buffer
@@ -123,18 +117,31 @@ void AssimpReader::LoadNode(const aiScene* scene, aiNode* nd, const glm::mat4& p
 
 			for(int id = 0; id < maxIndice + 1; id++)
 			{
-				Color.push_back(mesh->mColors[0][id].r);
-				Color.push_back(mesh->mColors[0][id].g);
-				Color.push_back(mesh->mColors[0][id].b);
+				glm::vec3 color(mesh->mColors[0][id].r, mesh->mColors[0][id].g,mesh->mColors[0][id].b);
+				meshData.Colors.push_back(color);
 			}
-			hasColor = true;
 		}
-		else
+
+		//    * UV buffer
+		if (mesh->GetNumUVChannels() > 0)
 		{
-			for(int i = 0; i < (maxIndice + 1)*3; i++)
-				Color.push_back(1.f);
+			// TODO: Gestion des materiaux multiples
+			if (mesh->GetNumUVChannels() > 1)
+			{
+				std::cout << "[Warning] More than one UV channels ( " << mesh->GetNumUVChannels() << " ). \n";
+			}
+
+			for(int id = 0; id < maxIndice+1; id++)
+			{
+				glm::vec2 uvcoord(mesh->mTextureCoords[0][id].x,mesh->mTextureCoords[0][id].y);
+				meshData.UVs.push_back(uvcoord);
+			}
 		}
-	}
+
+		//TODO: Voir si ce patch est utile
+		if(!meshData.Indices.empty())
+			Meshs.push_back(meshData);
+	} // Fin iteration sur Childs
 
 	// Add all childrens
 	for (int n = 0; n < nd->mNumChildren; ++n)
