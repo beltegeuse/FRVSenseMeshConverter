@@ -1,5 +1,4 @@
 // Includes Utils
-#include "tinyxml.h"
 #include "options.h"
 // Includes STD
 #include <iostream>
@@ -10,97 +9,10 @@
 #include <limits.h>
 // Includes Code proj
 #include "AssimpReader.h"
-
-TiXmlElement* writeAttribute(const std::vector<float>& data, int index, int size)
-{
-	TiXmlElement* attributeNode = new TiXmlElement("attribute");
-	attributeNode->SetAttribute("index",index);
-	attributeNode->SetAttribute("type","float");
-	attributeNode->SetAttribute("size", size);
-
-	std::stringstream ss;
-	for(std::size_t i = 0; i < data.size(); i++)
-	{
-		ss << data[i] << " ";
-	}
-	attributeNode->LinkEndChild(new TiXmlText(ss.str()));
-	return attributeNode;
-}
-
-TiXmlElement* writeVAO(const std::string& name, int nbSources, ...)
-{
-	TiXmlElement* vaoNode = new TiXmlElement("vao");
-	vaoNode->SetAttribute("name", name);
-
-	int attribID;
-	va_list vl;
-    va_start(vl,nbSources);
-    for (int i=0;i<nbSources;i++)
-	{
-    	attribID=va_arg(vl,int);
-    	TiXmlElement * sourceNode =  new TiXmlElement("source");
-    	sourceNode->SetAttribute("attrib", attribID);
-    	vaoNode->LinkEndChild(sourceNode);
-	}
-    va_end(vl);
-
-	return vaoNode;
-}
-
-TiXmlElement* writeIndices(const std::vector<unsigned int>& data, const std::string& cmd = "triangles")
-{
-	TiXmlElement* indicesNode = new TiXmlElement("indices");
-	indicesNode->SetAttribute("cmd", cmd);
-
-	// Find the best type
-	if(data.size() < USHRT_MAX)
-		indicesNode->SetAttribute("type", "ushort");
-	else
-		indicesNode->SetAttribute("type", "uint");
-
-	std::stringstream ss;
-	for(std::size_t i = 0; i < data.size(); i++)
-		ss << data[i] << " ";
-
-	indicesNode->LinkEndChild(new TiXmlText(ss.str()));
-	return indicesNode;
-}
-
-//void WritegltutExport()
-//{
-//	////////////////////////
-//	// Write the xml file
-//	////////////////////////
-//	TiXmlDocument doc(outFilePath);
-//
-//	TiXmlDeclaration * decl = new TiXmlDeclaration("1.0", "", "");
-//	TiXmlElement* meshNode = new TiXmlElement("mesh");
-//
-//	// --- Write attributes
-//	meshNode->LinkEndChild(writeAttribute(meshReader.Vertex, 0, 3));
-//	if(meshReader.hasColor)
-//		meshNode->LinkEndChild(writeAttribute(meshReader.Color, 1, 3));
-//	if(meshReader.hasNormal)
-//			meshNode->LinkEndChild(writeAttribute(meshReader.Normal, 2, 3));
-//
-//	// --- Write vao
-//	meshNode->LinkEndChild(writeVAO("flat", 1, 0));
-//	if(meshReader.hasColor)
-//		meshNode->LinkEndChild(writeVAO("color", 2, 0, 1));
-//	if(meshReader.hasNormal)
-//		meshNode->LinkEndChild(writeVAO("lit", 2, 0, 2));
-//	if(meshReader.hasColor && meshReader.hasNormal)
-//		meshNode->LinkEndChild(writeVAO("lit-color", 2, 0, 1, 2));
-//
-//	// --- Write index buffer
-//	meshNode->LinkEndChild(writeIndices(meshReader.Indices));
-//
-//	// --- Write the XML file
-//	doc.LinkEndChild(decl);
-//	doc.LinkEndChild(meshNode);
-//
-//	doc.SaveFile(outFilePath);
-//}
+#include "Exporter/Exporters.h"
+#ifdef USE_VISU
+#include "Visu.h"
+#endif
 
 //////////////////////////////////////////
 //////////////////////////////////////////
@@ -113,6 +25,10 @@ static const char * optv[] = {
     "h|help",
     "i:file-input    <path>",
     "o?file-output   <path>",
+	"t:type          <exportType>",
+#ifdef USE_VISU
+	"v|visu",
+#endif
     NULL
 } ;
 
@@ -132,6 +48,8 @@ int main(int argc, char *argv[])
 	// variables
 	std::string inFilePath;
 	std::string outFilePath = "mesh.xml";
+	std::string exportType = "PBRT";
+	bool visu = false;
 
 	opts.ctrls(Options::PARSE_POS);
 	while(optchar  = opts(iter, optarg) ) {
@@ -141,9 +59,16 @@ int main(int argc, char *argv[])
 			  showUsage(opts,std::cout);
 			  return 0;
 			  break;
+			case 't':
+				if (optarg == NULL)  errors.push_back("type : need an type");
+				else exportType = optarg;
+				break;
 			case 'i':
 				if (optarg == NULL)  errors.push_back("infile : need an file path");
 				else inFilePath = optarg;
+				break;
+			case 'v':
+				visu = true;
 				break;
 			case 'o':
 				if (optarg == NULL)  errors.push_back("outfile : need an file path");
@@ -171,6 +96,16 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	if(!visu)
+	{
+		if(exportType == "")
+		{
+			std::cerr << "[Error] You must specify the export type." << std::endl;
+			showUsage(opts,std::cerr);
+			return 1;
+		}
+	}
+
 	AssimpReader meshReader;
 	meshReader.LoadFromFile(inFilePath);
 
@@ -189,60 +124,14 @@ int main(int argc, char *argv[])
 		std::cout << "  * has UV : " << (meshReader.Meshs[i].UVs.empty() ? "False" : "True") << std::endl;
 	}
 
-	// Exporter PBRT
-	std::cout << "\n";
-	std::cout << "Write PBRT file : " << outFilePath << "... \n";
-	std::fstream file(outFilePath.c_str(), std::fstream::out);
-	
-	for(unsigned int i = 0; i < meshReader.Meshs.size(); i++)
+	if(visu)
 	{
-		std::cout << "... Write Mesh";
-		file << "AttributeBegin\n";
-		file << "Shape \"trianglemesh\"\n";
-
-		// *** Vertex
-		file << "\"point P\" [\n";
-		for(unsigned int n = 0; n < meshReader.Meshs[i].Vertex.size(); n++)
-		{
-			glm::vec4 vertex = meshReader.Meshs[i].Vertex[n];
-			file << vertex.x / vertex.w << " " << vertex.y / vertex.w  << " " << vertex.x / vertex.z << "\n";
-		}
-		file << "]\n";
-		
-		// *** UVs
-		if(!meshReader.Meshs[i].UVs.empty())
-		{
-			file << "\"float uv\" [\n";
-			for(unsigned int n = 0; n < meshReader.Meshs[i].UVs.size(); n++)
-			{
-				glm::vec2 uvcoord = meshReader.Meshs[i].UVs[n];
-				file << uvcoord.x << " " << uvcoord.y  << "\n";
-			}
-			file << "]\n";
-		}
-
-		// *** Normales 
-		if(!meshReader.Meshs[i].Normals.empty())
-		{
-			file << "\"normal N\" [\n";
-			for(unsigned int n = 0; n < meshReader.Meshs[i].Normals.size(); n++)
-			{
-				glm::vec3 normal = meshReader.Meshs[i].Normals[n];
-				file << normal.x << " " << normal.y  << " " << normal.x << "\n";
-			}
-			file << "]\n";
-		}
-
-		// *** Indices
-		file << "\"integer indices\" [\n";
-		for(unsigned int n = 0; n < meshReader.Meshs[i].Indices.size(); n+=3)
-		{
-			file << meshReader.Meshs[i].Indices[n] << " " << meshReader.Meshs[i].Indices[n+1] 
-				 << " " << meshReader.Meshs[i].Indices[n+2] << "\n";
-		}
-		file << "]\n";
-
-		file << "AttributeEnd\n";
+		Visualizer visuGL(meshReader);
+		visuGL.Run();
+	}
+	else
+	{
+		Exporters::Exporter(meshReader, outFilePath, exportType);
 	}
 }
 
