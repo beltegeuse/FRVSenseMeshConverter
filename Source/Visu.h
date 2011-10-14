@@ -2,16 +2,20 @@
 #include "C3/Window.h"
 #include "AssimpReader.h"
 #include <gl/glew.h>
+#include "Camera.h"
+
 class Visualizer
 {
 private:
 	C3::Window m_Win;
 	const AssimpReader& m_MeshReader;
+	Camera m_Cam;
 	/*GLuint ** m_VBOs;*/
 
 public:
 	Visualizer(const AssimpReader& meshReader) :
-		m_MeshReader(meshReader) // m_VBOs(NULL)
+		m_MeshReader(meshReader),
+		m_Cam(glm::vec3(3,4,2), glm::vec3(0,0,0))// m_VBOs(NULL)
 	{
 		C3::WindowMode mode(800,600);
 		C3::OpenGLContextSettings openGLSettings(3,1);
@@ -82,7 +86,6 @@ public:
 		C3::Event event;
 		while(m_Win.PoolEvent(event))
 		{
-			//std::cout << "Event !" << std::endl;
 			if(event.Type == C3::Event::Closed)
 			{
 				std::cout << "Close ... " << std::endl;
@@ -96,20 +99,25 @@ public:
 					m_Win.Close();
 				}
 			}
+
+			m_Cam.UpdateEvent(event);
 		}
+		m_Cam.Update(m_Win.GetFrameTime()/1000.f);
 	}
 
 	void Run()
 	{
 		while(m_Win.IsOpened())
 		{
+
 			Update();
 
 			glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 			glMatrixMode( GL_MODELVIEW );
 			glLoadIdentity( );
-			gluLookAt(3,4,2,0,0,0,0,0,1);
+			//std::cout << m_Cam << std::endl;
+			m_Cam.ApplyView();
 
 			Display();
 

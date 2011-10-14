@@ -13,6 +13,7 @@ SET(MESHCONVERTER_SOURCES
 	Exporter/ExporterPBRT.h
 	Exporter/ExporterGLTUT.h
 	Exporter/Exporters.h
+	Camera.h
 )
 
 INCLUDE_DIRECTORIES(
