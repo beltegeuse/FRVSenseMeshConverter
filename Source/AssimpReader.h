@@ -9,6 +9,11 @@
 // Includes STL
 #include <vector>
 
+struct  AssimpMaterial
+{
+	
+};
+
 struct AssimpMesh
 {
 	std::vector<unsigned int> Indices;

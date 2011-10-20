@@ -76,6 +76,8 @@ public:
 		else if(event.Type == C3::Event::MouseButtonPressed)
 		{
 			m_MouseClick = true;
+			m_OldPositionMouse.x = event.MouseButton.X;
+			m_OldPositionMouse.y = event.MouseButton.Y;
 		}
 		else if(event.Type == C3::Event::MouseButtonReleased)
 		{
@@ -85,13 +87,13 @@ public:
 		{
 			if(m_MouseClick)
 			{
-				//std::cout << event.MouseMove.X << " | " << event.MouseMove.Y << std::endl;
-				m_AngleNew.y -= event.MouseMove.X - m_OldPositionMouse.x;
-				m_AngleNew.x -= event.MouseMove.Y - m_OldPositionMouse.y;
-				m_OldPositionMouse.x = event.MouseMove.X;
-				m_OldPositionMouse.y = event.MouseMove.Y;
+				std::cout << m_AngleNew.x << " | " << m_AngleNew.y << std::endl;
+				m_AngleNew.y += event.MouseMove.X - m_OldPositionMouse.x;
+				m_AngleNew.x += event.MouseMove.Y - m_OldPositionMouse.y;
 				m_AngleNew.x = std::min(89.f, std::max(-89.f, m_AngleNew.x));
 			}
+			m_OldPositionMouse.x = event.MouseMove.X;
+			m_OldPositionMouse.y = event.MouseMove.Y;
 		}
 	}
 
